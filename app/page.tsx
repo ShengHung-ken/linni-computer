@@ -92,7 +92,7 @@ export default function HomePage() {
             className="flex items-center gap-3"
           >
             <Image
-              src="/logo.svg"
+              src="/linni-computer/logo.svg"
               alt="錸鈮電腦"
               width={52}
               height={52}
@@ -237,7 +237,7 @@ export default function HomePage() {
 
                 <div className="col-span-full flex items-center justify-center rounded-3xl border border-white/10 bg-black/30 px-8 py-10">
                   <Image
-                    src="/logo.svg"
+                    src="/linni-computer/logo.svg"
                     alt="錸鈮電腦 Logo"
                     width={180}
                     height={180}
