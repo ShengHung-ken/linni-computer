@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  color: #ffffff;
+  background:
+    radial-gradient(
+      circle at 70% 0%,
+      rgba(0, 119, 255, 0.12),
+      transparent 30%
+    ),
+    linear-gradient(180deg, #05090f 0%, #02050a 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 17, 29, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+.tech-background {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.025) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      225deg,
+      rgba(255, 255, 255, 0.025) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      315deg,
+      rgba(255, 255, 255, 0.02) 25%,
+      #07101d 25%
+    );
+  background-position:
+    20px 0,
+    20px 0,
+    0 0,
+    0 0;
+  background-size: 40px 40px;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #0d6efd, #008cff);
+  transition: 0.2s ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 700;
+  color: white;
+  transition: 0.2s ease;
+}
+
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
