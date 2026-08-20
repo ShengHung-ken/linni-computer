@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "錸鈮電腦 | 專業電腦維修・組裝升級",
+  title: "鈦鼎資訊 | Titanium IT",
   description:
-    "錸鈮電腦提供電腦維修、組裝升級、系統重灌、零組件與電腦周邊服務。",
+    "鈦鼎資訊提供電腦維修、客製化組裝、硬體升級、系統重灌、零組件與周邊設備服務。",
 };
 
 export default function RootLayout({

@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
-  basePath: "/linni-computer",
-  assetPrefix: "/linni-computer/",
+  basePath: "/titanium-it",
+  assetPrefix: "/titanium-it/",
   trailingSlash: true,
 
   images: {

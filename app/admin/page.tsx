@@ -54,12 +54,8 @@ const emptyForm: ProductForm = {
   imageUrl: "",
 };
 
-function formatPrice(
-  price: number,
-) {
-  return new Intl.NumberFormat(
-    "zh-TW",
-  ).format(price);
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("zh-TW").format(price);
 }
 
 export default function AdminPage() {
@@ -67,34 +63,22 @@ export default function AdminPage() {
     useState<Product[]>([]);
 
   const [form, setForm] =
-    useState<ProductForm>(
-      emptyForm,
-    );
+    useState<ProductForm>(emptyForm);
 
   const [editingId, setEditingId] =
-    useState<number | null>(
-      null,
-    );
+    useState<number | null>(null);
 
-  const [
-    compressing,
-    setCompressing,
-  ] = useState(false);
+  const [compressing, setCompressing] =
+    useState(false);
 
-  const [
-    imageInfo,
-    setImageInfo,
-  ] = useState("");
+  const [imageInfo, setImageInfo] =
+    useState("");
 
-  const [
-    imageError,
-    setImageError,
-  ] = useState("");
+  const [imageError, setImageError] =
+    useState("");
 
   useEffect(() => {
-    setProducts(
-      loadProducts(),
-    );
+    setProducts(loadProducts());
   }, []);
 
   function updateProducts(
@@ -103,12 +87,10 @@ export default function AdminPage() {
     setProducts(nextProducts);
 
     try {
-      saveProducts(
-        nextProducts,
-      );
+      saveProducts(nextProducts);
     } catch {
       alert(
-        "瀏覽器儲存空間不足。圖片太多時，之後需要改用 Supabase 或 Appwrite Storage。",
+        "瀏覽器儲存空間不足。圖片較多時需要改用雲端 Storage。",
       );
     }
   }
@@ -118,31 +100,24 @@ export default function AdminPage() {
       const online =
         products.filter(
           (product) =>
-            product.status ===
-            "上架",
+            product.status === "上架",
         ).length;
 
       const offline =
         products.filter(
           (product) =>
-            product.status ===
-            "下架",
+            product.status === "下架",
         ).length;
 
       const stock =
         products.reduce(
-          (
-            total,
-            product,
-          ) =>
-            total +
-            product.stock,
+          (total, product) =>
+            total + product.stock,
           0,
         );
 
       return {
-        total:
-          products.length,
+        total: products.length,
         online,
         offline,
         stock,
@@ -152,29 +127,18 @@ export default function AdminPage() {
   function startEdit(
     product: Product,
   ) {
-    setEditingId(
-      product.id,
-    );
+    setEditingId(product.id);
 
     setForm({
       name: product.name,
-      category:
-        product.category,
-      price: String(
-        product.price,
-      ),
-      stock: String(
-        product.stock,
-      ),
-      status:
-        product.status,
+      category: product.category,
+      price: String(product.price),
+      stock: String(product.stock),
+      status: product.status,
       description:
-        product.description.join(
-          "\n",
-        ),
+        product.description.join("\n"),
       imageUrl:
-        product.imageUrl ??
-        "",
+        product.imageUrl ?? "",
     });
 
     setImageInfo("");
@@ -188,11 +152,7 @@ export default function AdminPage() {
 
   function cancelEdit() {
     setEditingId(null);
-
-    setForm(
-      emptyForm,
-    );
-
+    setForm(emptyForm);
     setImageInfo("");
     setImageError("");
   }
@@ -203,16 +163,12 @@ export default function AdminPage() {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      alert(
-        "請輸入商品名稱",
-      );
+      alert("請輸入商品名稱");
       return;
     }
 
     if (!form.price) {
-      alert(
-        "請輸入商品價格",
-      );
+      alert("請輸入商品價格");
       return;
     }
 
@@ -220,17 +176,13 @@ export default function AdminPage() {
       Number(form.price);
 
     const stock =
-      Number(
-        form.stock || 0,
-      );
+      Number(form.stock || 0);
 
     if (
       Number.isNaN(price) ||
       price < 0
     ) {
-      alert(
-        "商品價格格式錯誤",
-      );
+      alert("商品價格格式錯誤");
       return;
     }
 
@@ -238,21 +190,17 @@ export default function AdminPage() {
       Number.isNaN(stock) ||
       stock < 0
     ) {
-      alert(
-        "庫存格式錯誤",
-      );
+      alert("庫存格式錯誤");
       return;
     }
 
     const productData = {
-      name:
-        form.name.trim(),
-      category:
-        form.category,
+      name: form.name.trim(),
+      category: form.category,
       price,
       stock,
-      status:
-        form.status,
+      status: form.status,
+
       description:
         form.description
           .split("\n")
@@ -260,19 +208,17 @@ export default function AdminPage() {
             item.trim(),
           )
           .filter(Boolean),
+
       imageUrl:
         form.imageUrl ||
         undefined,
     };
 
-    if (
-      editingId !== null
-    ) {
+    if (editingId !== null) {
       const nextProducts =
         products.map(
           (product) =>
-            product.id ===
-            editingId
+            product.id === editingId
               ? {
                   ...product,
                   ...productData,
@@ -280,28 +226,21 @@ export default function AdminPage() {
               : product,
         );
 
-      updateProducts(
-        nextProducts,
-      );
+      updateProducts(nextProducts);
 
-      alert(
-        "商品修改完成",
-      );
+      alert("商品修改完成");
     } else {
-      const newProduct: Product =
-        {
-          id: Date.now(),
-          ...productData,
-        };
+      const newProduct: Product = {
+        id: Date.now(),
+        ...productData,
+      };
 
       updateProducts([
         newProduct,
         ...products,
       ]);
 
-      alert(
-        "商品新增完成",
-      );
+      alert("商品新增完成");
     }
 
     cancelEdit();
@@ -313,10 +252,10 @@ export default function AdminPage() {
     const nextProducts =
       products.map(
         (item) =>
-          item.id ===
-          product.id
+          item.id === product.id
             ? {
                 ...item,
+
                 status:
                   item.status ===
                   "上架"
@@ -326,9 +265,7 @@ export default function AdminPage() {
             : item,
       );
 
-    updateProducts(
-      nextProducts,
-    );
+    updateProducts(nextProducts);
   }
 
   function deleteProduct(
@@ -346,17 +283,13 @@ export default function AdminPage() {
     const nextProducts =
       products.filter(
         (item) =>
-          item.id !==
-          product.id,
+          item.id !== product.id,
       );
 
-    updateProducts(
-      nextProducts,
-    );
+    updateProducts(nextProducts);
 
     if (
-      editingId ===
-      product.id
+      editingId === product.id
     ) {
       cancelEdit();
     }
@@ -366,8 +299,7 @@ export default function AdminPage() {
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const file =
-      event.target
-        .files?.[0];
+      event.target.files?.[0];
 
     if (!file) {
       return;
@@ -385,9 +317,7 @@ export default function AdminPage() {
         "請選擇圖片檔案。",
       );
 
-      event.target.value =
-        "";
-
+      event.target.value = "";
       return;
     }
 
@@ -402,16 +332,12 @@ export default function AdminPage() {
         "原始圖片不可超過 15MB。",
       );
 
-      event.target.value =
-        "";
-
+      event.target.value = "";
       return;
     }
 
     try {
-      setCompressing(
-        true,
-      );
+      setCompressing(true);
 
       const compressedFile =
         await compressImage(
@@ -433,8 +359,7 @@ export default function AdminPage() {
       setForm(
         (current) => ({
           ...current,
-          imageUrl:
-            dataUrl,
+          imageUrl: dataUrl,
         }),
       );
 
@@ -460,18 +385,13 @@ export default function AdminPage() {
       );
     } catch (error) {
       setImageError(
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "圖片壓縮失敗",
       );
     } finally {
-      setCompressing(
-        false,
-      );
-
-      event.target.value =
-        "";
+      setCompressing(false);
+      event.target.value = "";
     }
   }
 
@@ -490,11 +410,10 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-[#050910] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
-        {/* Header */}
         <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b111d] p-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-black">
-              錸鈮電腦・商品後台
+              鈦鼎資訊・商品後台
             </h1>
 
             <p className="mt-2 text-slate-400">
@@ -511,43 +430,33 @@ export default function AdminPage() {
           </Link>
         </header>
 
-        {/* Statistics */}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="商品總數"
-            value={
-              statistics.total
-            }
+            value={statistics.total}
             color="text-blue-400"
           />
 
           <StatCard
             title="上架商品"
-            value={
-              statistics.online
-            }
+            value={statistics.online}
             color="text-green-400"
           />
 
           <StatCard
             title="下架商品"
-            value={
-              statistics.offline
-            }
+            value={statistics.offline}
             color="text-orange-400"
           />
 
           <StatCard
             title="庫存總數"
-            value={
-              statistics.stock
-            }
+            value={statistics.stock}
             color="text-purple-400"
           />
         </section>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-          {/* Product list */}
           <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b111d]">
             <div className="border-b border-white/10 p-6">
               <h2 className="text-xl font-black">
@@ -595,26 +504,17 @@ export default function AdminPage() {
 
                 <tbody>
                   {products.map(
-                    (
-                      product,
-                    ) => (
+                    (product) => (
                       <tr
-                        key={
-                          product.id
-                        }
+                        key={product.id}
                         className="border-t border-white/10"
                       >
-                        {/* Image */}
                         <td className="px-4 py-4">
                           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
                             {product.imageUrl ? (
                               <img
-                                src={
-                                  product.imageUrl
-                                }
-                                alt={
-                                  product.name
-                                }
+                                src={product.imageUrl}
+                                alt={product.name}
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -625,12 +525,9 @@ export default function AdminPage() {
                           </div>
                         </td>
 
-                        {/* Name */}
                         <td className="px-4 py-4">
                           <div className="font-bold">
-                            {
-                              product.name
-                            }
+                            {product.name}
                           </div>
 
                           <div className="mt-1 max-w-xs truncate text-xs text-slate-500">
@@ -640,14 +537,10 @@ export default function AdminPage() {
                           </div>
                         </td>
 
-                        {/* Category */}
                         <td className="px-4 py-4 text-slate-300">
-                          {
-                            product.category
-                          }
+                          {product.category}
                         </td>
 
-                        {/* Price */}
                         <td className="px-4 py-4 font-bold">
                           NT$
                           {formatPrice(
@@ -655,14 +548,10 @@ export default function AdminPage() {
                           )}
                         </td>
 
-                        {/* Stock */}
                         <td className="px-4 py-4">
-                          {
-                            product.stock
-                          }
+                          {product.stock}
                         </td>
 
-                        {/* Status */}
                         <td className="px-4 py-4">
                           <button
                             type="button"
@@ -678,13 +567,10 @@ export default function AdminPage() {
                                 : "rounded-full bg-orange-500/15 px-3 py-1 text-xs font-bold text-orange-400 transition hover:bg-orange-500/25"
                             }
                           >
-                            {
-                              product.status
-                            }
+                            {product.status}
                           </button>
                         </td>
 
-                        {/* Actions */}
                         <td className="px-4 py-4">
                           <div className="flex gap-2">
                             <button
@@ -722,9 +608,7 @@ export default function AdminPage() {
                     0 && (
                     <tr>
                       <td
-                        colSpan={
-                          7
-                        }
+                        colSpan={7}
                         className="p-10 text-center text-slate-500"
                       >
                         尚未建立任何商品
@@ -736,7 +620,6 @@ export default function AdminPage() {
             </div>
           </section>
 
-          {/* Product form */}
           <aside className="rounded-3xl border border-white/10 bg-[#0b111d] p-6">
             <div className="mb-6 flex items-center gap-3">
               {editingId ===
@@ -764,26 +647,17 @@ export default function AdminPage() {
             </div>
 
             <form
-              onSubmit={
-                saveProduct
-              }
+              onSubmit={saveProduct}
               className="space-y-5"
             >
-              {/* Name */}
               <FormField label="商品名稱">
                 <input
-                  value={
-                    form.name
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.name}
+                  onChange={(event) =>
                     setForm({
                       ...form,
                       name:
-                        event
-                          .target
-                          .value,
+                        event.target.value,
                     })
                   }
                   className="admin-input"
@@ -791,21 +665,14 @@ export default function AdminPage() {
                 />
               </FormField>
 
-              {/* Category */}
               <FormField label="商品分類">
                 <select
-                  value={
-                    form.category
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.category}
+                  onChange={(event) =>
                     setForm({
                       ...form,
                       category:
-                        event
-                          .target
-                          .value,
+                        event.target.value,
                     })
                   }
                   className="admin-input"
@@ -832,24 +699,17 @@ export default function AdminPage() {
                 </select>
               </FormField>
 
-              {/* Price / stock */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="售價">
                   <input
                     type="number"
                     min="0"
-                    value={
-                      form.price
-                    }
-                    onChange={(
-                      event,
-                    ) =>
+                    value={form.price}
+                    onChange={(event) =>
                       setForm({
                         ...form,
                         price:
-                          event
-                            .target
-                            .value,
+                          event.target.value,
                       })
                     }
                     className="admin-input"
@@ -861,18 +721,12 @@ export default function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    value={
-                      form.stock
-                    }
-                    onChange={(
-                      event,
-                    ) =>
+                    value={form.stock}
+                    onChange={(event) =>
                       setForm({
                         ...form,
                         stock:
-                          event
-                            .target
-                            .value,
+                          event.target.value,
                       })
                     }
                     className="admin-input"
@@ -881,20 +735,14 @@ export default function AdminPage() {
                 </FormField>
               </div>
 
-              {/* Status */}
               <FormField label="上下架狀態">
                 <select
-                  value={
-                    form.status
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.status}
+                  onChange={(event) =>
                     setForm({
                       ...form,
                       status:
-                        event
-                          .target
+                        event.target
                           .value as ProductStatus,
                     })
                   }
@@ -910,7 +758,6 @@ export default function AdminPage() {
                 </select>
               </FormField>
 
-              {/* Image upload */}
               <FormField label="商品圖片">
                 <label
                   className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-5 text-center text-sm transition ${
@@ -928,40 +775,31 @@ export default function AdminPage() {
                   </span>
 
                   <span className="text-xs text-slate-500">
-                    自動轉成 WebP
-                    ・最大 1600 ×
-                    1600
+                    自動轉成 WebP・最大 1600 × 1600
                   </span>
 
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
-                    onChange={
-                      handleImageChange
-                    }
-                    disabled={
-                      compressing
-                    }
+                    onChange={handleImageChange}
+                    disabled={compressing}
                     className="hidden"
                   />
                 </label>
               </FormField>
 
-              {/* Compression info */}
               {imageInfo && (
                 <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-3 text-sm leading-6 text-green-300">
                   ✓ {imageInfo}
                 </div>
               )}
 
-              {/* Image error */}
               {imageError && (
                 <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm leading-6 text-red-300">
                   {imageError}
                 </div>
               )}
 
-              {/* Preview */}
               {form.imageUrl && (
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
@@ -971,9 +809,7 @@ export default function AdminPage() {
 
                     <button
                       type="button"
-                      onClick={
-                        removeImage
-                      }
+                      onClick={removeImage}
                       className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -982,31 +818,22 @@ export default function AdminPage() {
                   </div>
 
                   <img
-                    src={
-                      form.imageUrl
-                    }
+                    src={form.imageUrl}
                     alt="商品圖片預覽"
                     className="h-56 w-full object-contain"
                   />
                 </div>
               )}
 
-              {/* Description */}
               <FormField label="商品說明">
                 <textarea
                   rows={7}
-                  value={
-                    form.description
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.description}
+                  onChange={(event) =>
                     setForm({
                       ...form,
                       description:
-                        event
-                          .target
-                          .value,
+                        event.target.value,
                     })
                   }
                   className="admin-input resize-none"
@@ -1020,12 +847,9 @@ Intel Core i5
                 />
               </FormField>
 
-              {/* Save */}
               <button
                 type="submit"
-                disabled={
-                  compressing
-                }
+                disabled={compressing}
                 className="primary-button w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {editingId ===
@@ -1035,20 +859,16 @@ Intel Core i5
                   <Save className="h-4 w-4" />
                 )}
 
-                {editingId ===
-                null
+                {editingId === null
                   ? "新增商品"
                   : "儲存修改"}
               </button>
 
-              {/* Cancel */}
               {editingId !==
                 null && (
                 <button
                   type="button"
-                  onClick={
-                    cancelEdit
-                  }
+                  onClick={cancelEdit}
                   className="secondary-button w-full gap-2"
                 >
                   <X className="h-4 w-4" />
@@ -1057,15 +877,9 @@ Intel Core i5
               )}
             </form>
 
-            {/* Demo notice */}
             <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-xs leading-6 text-yellow-200">
-              目前商品資料與圖片暫存在瀏覽器
-              localStorage。
-              這適合測試網站，但不適合大量商品圖片。
-              正式版接上 Supabase
-              或 Appwrite 後，
-              壓縮完成的 WebP
-              圖片會改成上傳至雲端 Storage。
+              目前商品資料與圖片暫存在瀏覽器 localStorage。
+              正式接上雲端資料庫後，商品資料與圖片就能讓所有訪客同步看到。
             </div>
           </aside>
         </div>
@@ -1075,12 +889,7 @@ Intel Core i5
         .admin-input {
           width: 100%;
           border: 1px solid
-            rgba(
-              255,
-              255,
-              255,
-              0.1
-            );
+            rgba(255, 255, 255, 0.1);
           border-radius: 0.75rem;
           background: rgba(
             255,
@@ -1088,8 +897,7 @@ Intel Core i5
             255,
             0.04
           );
-          padding: 0.8rem
-            0.9rem;
+          padding: 0.8rem 0.9rem;
           color: white;
           outline: none;
           transition: 0.2s ease;
@@ -1098,8 +906,7 @@ Intel Core i5
         .admin-input:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0
-            3px
-            rgba(
+            3px rgba(
               59,
               130,
               246,
