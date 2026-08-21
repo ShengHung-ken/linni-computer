@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -8,16 +12,17 @@ import {
   Cpu,
   HardDrive,
   Laptop,
-  MapPin,
+  Mail,
   MessageCircle,
   Monitor,
-  Phone,
   ShieldCheck,
   ShoppingCart,
   Wrench,
 } from "lucide-react";
 
-import { services } from "@/lib/data";
+import {
+  services,
+} from "@/lib/data";
 
 import {
   loadProducts,
@@ -35,28 +40,37 @@ const serviceIcons = [
   Cpu,
 ];
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("zh-TW").format(price);
+function formatPrice(
+  price: number,
+) {
+  return new Intl.NumberFormat(
+    "zh-TW",
+  ).format(price);
 }
 
 export default function HomePage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [
+    products,
+    setProducts,
+  ] = useState<Product[]>(
+    [],
+  );
 
   useEffect(() => {
     function refreshProducts() {
-      const currentProducts = loadProducts().filter(
-        (product: Product) => product.status === "上架",
-      );
+      const currentProducts =
+        loadProducts().filter(
+          (product) =>
+            product.status ===
+            "上架",
+        );
 
-      setProducts(currentProducts);
+      setProducts(
+        currentProducts,
+      );
     }
 
     refreshProducts();
-
-    window.addEventListener(
-      "titanium-products-updated",
-      refreshProducts,
-    );
 
     window.addEventListener(
       "linni-products-updated",
@@ -69,11 +83,6 @@ export default function HomePage() {
     );
 
     return () => {
-      window.removeEventListener(
-        "titanium-products-updated",
-        refreshProducts,
-      );
-
       window.removeEventListener(
         "linni-products-updated",
         refreshProducts,
@@ -88,7 +97,6 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen">
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050910]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <Link
@@ -118,37 +126,51 @@ export default function HomePage() {
           </Link>
 
           <nav className="hidden items-center gap-7 text-sm text-slate-300 lg:flex">
-            <a href="#home" className="hover:text-white">
+            <a
+              href="#home"
+              className="hover:text-white"
+            >
               首頁
             </a>
 
-            <a href="#products" className="hover:text-white">
+            <a
+              href="#products"
+              className="hover:text-white"
+            >
               商品專區
             </a>
 
-            <a href="#services" className="hover:text-white">
+            <a
+              href="#services"
+              className="hover:text-white"
+            >
               服務項目
             </a>
 
-            <a href="#about" className="hover:text-white">
+            <a
+              href="#about"
+              className="hover:text-white"
+            >
               關於我們
             </a>
 
-            <a href="#contact" className="hover:text-white">
+            <a
+              href="#contact"
+              className="hover:text-white"
+            >
               聯絡我們
             </a>
 
             <Link
-              href="/admin"
+              href="/login"
               className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-blue-300 transition hover:bg-blue-500/20"
             >
-              後台管理
+              後台登入
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Hero */}
       <section
         id="home"
         className="tech-background border-b border-white/10"
@@ -161,9 +183,11 @@ export default function HomePage() {
 
             <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
               專業維修
+
               <span className="text-blue-400">
                 {" "}×{" "}
               </span>
+
               組裝升級
             </h1>
 
@@ -242,7 +266,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services */}
       <section
         id="services"
         className="mx-auto max-w-7xl px-5 py-20"
@@ -258,125 +281,152 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((service, index) => {
-            const Icon =
-              serviceIcons[index] ?? Wrench;
+          {services.map(
+            (
+              service,
+              index,
+            ) => {
+              const Icon =
+                serviceIcons[
+                  index
+                ] ?? Wrench;
 
-            return (
-              <article
-                key={service.title}
-                className="glass-panel rounded-3xl p-6 transition duration-200 hover:-translate-y-1 hover:border-blue-400/40"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
-                  <Icon className="h-6 w-6" />
-                </div>
+              return (
+                <article
+                  key={
+                    service.title
+                  }
+                  className="glass-panel rounded-3xl p-6 transition duration-200 hover:-translate-y-1 hover:border-blue-400/40"
+                >
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
+                    <Icon className="h-6 w-6" />
+                  </div>
 
-                <h3 className="text-xl font-bold">
-                  {service.title}
-                </h3>
+                  <h3 className="text-xl font-bold">
+                    {
+                      service.title
+                    }
+                  </h3>
 
-                <p className="mt-3 leading-7 text-slate-400">
-                  {service.description}
-                </p>
-              </article>
-            );
-          })}
+                  <p className="mt-3 leading-7 text-slate-400">
+                    {
+                      service.description
+                    }
+                  </p>
+                </article>
+              );
+            },
+          )}
         </div>
       </section>
 
-      {/* Products */}
       <section
         id="products"
         className="bg-slate-100 py-20 text-slate-950"
       >
         <div className="mx-auto max-w-7xl px-5">
-          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-bold tracking-widest text-blue-600">
-                PRODUCTS
-              </p>
+          <div className="mb-10">
+            <p className="text-sm font-bold tracking-widest text-blue-600">
+              PRODUCTS
+            </p>
 
-              <h2 className="mt-2 text-4xl font-black">
-                熱門商品
-              </h2>
-            </div>
+            <h2 className="mt-2 text-4xl font-black">
+              熱門商品
+            </h2>
 
-            <p className="text-sm text-slate-500">
-              商品可由後台新增、修改與上下架
+            <p className="mt-3 text-sm text-slate-500">
+              商品內容由後台管理
             </p>
           </div>
 
-          {products.length === 0 ? (
+          {products.length ===
+          0 ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-500">
               目前尚無上架商品
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {products.map((product: Product) => (
-                <article
-                  key={product.id}
-                  className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 to-slate-700">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <Cpu className="h-20 w-20 text-blue-300" />
-                    )}
-                  </div>
-
-                  <div className="p-5">
-                    <div className="mb-2 text-xs font-bold text-blue-600">
-                      {product.category}
-                    </div>
-
-                    <h3 className="min-h-14 text-lg font-black">
-                      {product.name}
-                    </h3>
-
-                    <ul className="mt-3 min-h-20 space-y-1 text-sm text-slate-500">
-                      {product.description.map(
-                        (
-                          item: string,
-                          index: number,
-                        ) => (
-                          <li
-                            key={`${product.id}-${index}`}
-                          >
-                            • {item}
-                          </li>
-                        ),
+              {products.map(
+                (product) => (
+                  <article
+                    key={
+                      product.id
+                    }
+                    className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 to-slate-700">
+                      {product.imageUrl ? (
+                        <img
+                          src={
+                            product.imageUrl
+                          }
+                          alt={
+                            product.name
+                          }
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Cpu className="h-20 w-20 text-blue-300" />
                       )}
-                    </ul>
-
-                    <div className="mt-4 text-sm text-slate-400">
-                      庫存：{product.stock}
                     </div>
 
-                    <div className="mt-2 text-2xl font-black text-red-600">
-                      NT$
-                      {formatPrice(product.price)}
-                    </div>
+                    <div className="p-5">
+                      <div className="mb-2 text-xs font-bold text-blue-600">
+                        {
+                          product.category
+                        }
+                      </div>
 
-                    <a
-                      href="#contact"
-                      className="mt-4 block w-full rounded-xl bg-slate-950 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-600"
-                    >
-                      詢問商品
-                    </a>
-                  </div>
-                </article>
-              ))}
+                      <h3 className="min-h-14 text-lg font-black">
+                        {
+                          product.name
+                        }
+                      </h3>
+
+                      <ul className="mt-3 min-h-20 space-y-1 text-sm text-slate-500">
+                        {product.description.map(
+                          (
+                            item,
+                            index,
+                          ) => (
+                            <li
+                              key={`${product.id}-${index}`}
+                            >
+                              • {item}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+
+                      <div className="mt-4 text-sm text-slate-400">
+                        庫存：
+                        {
+                          product.stock
+                        }
+                      </div>
+
+                      <div className="mt-2 text-2xl font-black text-red-600">
+                        NT$
+                        {formatPrice(
+                          product.price,
+                        )}
+                      </div>
+
+                      <a
+                        href="#contact"
+                        className="mt-4 block w-full rounded-xl bg-slate-950 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-600"
+                      >
+                        詢問商品
+                      </a>
+                    </div>
+                  </article>
+                ),
+              )}
             </div>
           )}
         </div>
       </section>
 
-      {/* About */}
       <section
         id="about"
         className="mx-auto max-w-7xl px-5 py-20"
@@ -397,8 +447,9 @@ export default function HomePage() {
             </p>
 
             <p className="mt-4 leading-8 text-slate-400">
-              無論是桌上型電腦、筆記型電腦、零組件升級、
-              系統問題或設備規劃，都歡迎與我們聯絡。
+              無論是桌上型電腦、筆記型電腦、
+              零組件升級、系統問題或設備規劃，
+              都歡迎與我們聯絡。
             </p>
           </div>
 
@@ -408,23 +459,24 @@ export default function HomePage() {
               "透明報價",
               "快速維修",
               "售後服務",
-            ].map((item: string) => (
-              <div
-                key={item}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
-              >
-                <ShieldCheck className="h-6 w-6 text-green-400" />
+            ].map(
+              (item) => (
+                <div
+                  key={item}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                >
+                  <ShieldCheck className="h-6 w-6 text-green-400" />
 
-                <span className="font-bold">
-                  {item}
-                </span>
-              </div>
-            ))}
+                  <span className="font-bold">
+                    {item}
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </div>
       </section>
 
-      {/* Contact */}
       <section
         id="contact"
         className="border-t border-white/10 py-20"
@@ -438,63 +490,72 @@ export default function HomePage() {
             維修、組裝、升級及商品問題歡迎洽詢
           </p>
 
-          <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-3">
-            <a
-              href="tel:0932931147"
-              className="glass-panel rounded-3xl p-6 text-center transition hover:border-blue-400/40"
-            >
-              <Phone className="mx-auto h-8 w-8 text-blue-400" />
+          <div className="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-3">
+            <div className="glass-panel rounded-3xl p-6 text-center">
+              <MessageCircle className="mx-auto h-9 w-9 text-green-400" />
 
-              <div className="mt-4 font-bold">
-                電話
+              <h3 className="mt-4 text-xl font-black">
+                LINE 官方帳號
+              </h3>
+
+              <p className="mt-2 break-all text-slate-400">
+                tetchy50709froze
+              </p>
+
+              <div className="mx-auto mt-5 max-w-[210px] overflow-hidden rounded-2xl bg-white p-3">
+                <img
+                  src="https://qr-official.line.me/gs/M_068wtdkw_GW.png?oat_content=qr"
+                  alt="鈦鼎資訊 LINE 官方帳號 QR Code"
+                  className="h-auto w-full"
+                />
               </div>
 
-              <div className="mt-2 text-slate-400">
-                0932-931-147
+              <p className="mt-3 text-xs text-slate-500">
+                使用 LINE 掃描 QR Code
+                加入官方帳號
+              </p>
+            </div>
+
+            <a
+              href="mailto:kevin7206160616@gmail.com"
+              className="glass-panel rounded-3xl p-6 text-center transition hover:border-blue-400/40"
+            >
+              <Mail className="mx-auto h-9 w-9 text-blue-400" />
+
+              <h3 className="mt-4 text-xl font-black">
+                聯絡 Email
+              </h3>
+
+              <p className="mt-2 break-all text-slate-400">
+                kevin7206160616@gmail.com
+              </p>
+
+              <div className="mt-6 inline-flex rounded-xl bg-blue-500/10 px-5 py-3 text-sm font-semibold text-blue-300">
+                寄送 Email
               </div>
             </a>
 
             <div className="glass-panel rounded-3xl p-6 text-center">
-              <MessageCircle className="mx-auto h-8 w-8 text-green-400" />
+              <Wrench className="mx-auto h-9 w-9 text-purple-400" />
 
-              <div className="mt-4 font-bold">
-                LINE
-              </div>
+              <h3 className="mt-4 text-xl font-black">
+                維修 / 商品諮詢
+              </h3>
 
-              <div className="mt-2 text-slate-400">
-                0932931147
-              </div>
-            </div>
-
-            <div className="glass-panel rounded-3xl p-6 text-center">
-              <MapPin className="mx-auto h-8 w-8 text-red-400" />
-
-              <div className="mt-4 font-bold">
-                地址
-              </div>
-
-              <div className="mt-2 text-slate-400">
-                桃園市中壢區龍昌路145號
-              </div>
+              <p className="mt-3 leading-7 text-slate-400">
+                電腦維修、客製化組裝、
+                系統升級、零組件及商品相關問題，
+                歡迎透過 LINE 或 Email 聯絡。
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Mobile admin */}
-      <div className="fixed bottom-5 right-5 z-40 lg:hidden">
-        <Link
-          href="/admin"
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl"
-          aria-label="後台管理"
-        >
-          <Wrench className="h-6 w-6" />
-        </Link>
-      </div>
-
-      {/* Footer */}
       <footer className="border-t border-white/10 px-5 py-8 text-center text-sm text-slate-500">
-        © {new Date().getFullYear()} 鈦鼎資訊 TITANIUM IT
+        ©{" "}
+        {new Date().getFullYear()}{" "}
+        鈦鼎資訊 TITANIUM IT
       </footer>
     </main>
   );

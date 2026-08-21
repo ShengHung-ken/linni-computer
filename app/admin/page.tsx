@@ -9,11 +9,13 @@ import {
 } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   ArrowLeft,
   Boxes,
   ImagePlus,
+  LogOut,
   Pencil,
   Plus,
   Save,
@@ -33,6 +35,13 @@ import {
   ProductStatus,
   saveProducts,
 } from "@/lib/products";
+
+import {
+  getSupabaseClient,
+} from "@/lib/supabase";
+
+const ADMIN_EMAIL =
+  "kevin7206160616@gmail.com";
 
 interface ProductForm {
   name: string;
@@ -54,43 +63,111 @@ const emptyForm: ProductForm = {
   imageUrl: "",
 };
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("zh-TW").format(price);
+function formatPrice(
+  price: number,
+) {
+  return new Intl.NumberFormat(
+    "zh-TW",
+  ).format(price);
 }
 
 export default function AdminPage() {
+  const router = useRouter();
+
   const [products, setProducts] =
     useState<Product[]>([]);
 
   const [form, setForm] =
-    useState<ProductForm>(emptyForm);
+    useState<ProductForm>(
+      emptyForm,
+    );
 
   const [editingId, setEditingId] =
-    useState<number | null>(null);
+    useState<number | null>(
+      null,
+    );
 
-  const [compressing, setCompressing] =
-    useState(false);
+  const [
+    compressing,
+    setCompressing,
+  ] = useState(false);
 
-  const [imageInfo, setImageInfo] =
-    useState("");
+  const [
+    imageInfo,
+    setImageInfo,
+  ] = useState("");
 
-  const [imageError, setImageError] =
-    useState("");
+  const [
+    imageError,
+    setImageError,
+  ] = useState("");
+
+  const [
+    authChecking,
+    setAuthChecking,
+  ] = useState(true);
+
+  const [
+    configurationError,
+    setConfigurationError,
+  ] = useState(false);
 
   useEffect(() => {
-    setProducts(loadProducts());
-  }, []);
+    async function initialize() {
+      const supabase =
+        getSupabaseClient();
+
+      if (!supabase) {
+        setConfigurationError(
+          true,
+        );
+
+        setAuthChecking(false);
+
+        return;
+      }
+
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (
+        !user ||
+        user.email !==
+          ADMIN_EMAIL
+      ) {
+        router.replace(
+          "/login",
+        );
+
+        return;
+      }
+
+      setProducts(
+        loadProducts(),
+      );
+
+      setAuthChecking(false);
+    }
+
+    initialize();
+  }, [router]);
 
   function updateProducts(
     nextProducts: Product[],
   ) {
-    setProducts(nextProducts);
+    setProducts(
+      nextProducts,
+    );
 
     try {
-      saveProducts(nextProducts);
+      saveProducts(
+        nextProducts,
+      );
     } catch {
       alert(
-        "瀏覽器儲存空間不足。圖片較多時需要改用雲端 Storage。",
+        "瀏覽器儲存空間不足。正式版會將圖片改存雲端 Storage。",
       );
     }
   }
@@ -100,24 +177,31 @@ export default function AdminPage() {
       const online =
         products.filter(
           (product) =>
-            product.status === "上架",
+            product.status ===
+            "上架",
         ).length;
 
       const offline =
         products.filter(
           (product) =>
-            product.status === "下架",
+            product.status ===
+            "下架",
         ).length;
 
       const stock =
         products.reduce(
-          (total, product) =>
-            total + product.stock,
+          (
+            total,
+            product,
+          ) =>
+            total +
+            product.stock,
           0,
         );
 
       return {
-        total: products.length,
+        total:
+          products.length,
         online,
         offline,
         stock,
@@ -127,18 +211,35 @@ export default function AdminPage() {
   function startEdit(
     product: Product,
   ) {
-    setEditingId(product.id);
+    setEditingId(
+      product.id,
+    );
 
     setForm({
       name: product.name,
-      category: product.category,
-      price: String(product.price),
-      stock: String(product.stock),
-      status: product.status,
+
+      category:
+        product.category,
+
+      price: String(
+        product.price,
+      ),
+
+      stock: String(
+        product.stock,
+      ),
+
+      status:
+        product.status,
+
       description:
-        product.description.join("\n"),
+        product.description.join(
+          "\n",
+        ),
+
       imageUrl:
-        product.imageUrl ?? "",
+        product.imageUrl ??
+        "",
     });
 
     setImageInfo("");
@@ -152,7 +253,11 @@ export default function AdminPage() {
 
   function cancelEdit() {
     setEditingId(null);
-    setForm(emptyForm);
+
+    setForm(
+      emptyForm,
+    );
+
     setImageInfo("");
     setImageError("");
   }
@@ -163,12 +268,18 @@ export default function AdminPage() {
     event.preventDefault();
 
     if (!form.name.trim()) {
-      alert("請輸入商品名稱");
+      alert(
+        "請輸入商品名稱",
+      );
+
       return;
     }
 
     if (!form.price) {
-      alert("請輸入商品價格");
+      alert(
+        "請輸入商品價格",
+      );
+
       return;
     }
 
@@ -176,13 +287,18 @@ export default function AdminPage() {
       Number(form.price);
 
     const stock =
-      Number(form.stock || 0);
+      Number(
+        form.stock || 0,
+      );
 
     if (
       Number.isNaN(price) ||
       price < 0
     ) {
-      alert("商品價格格式錯誤");
+      alert(
+        "商品價格格式錯誤",
+      );
+
       return;
     }
 
@@ -190,16 +306,26 @@ export default function AdminPage() {
       Number.isNaN(stock) ||
       stock < 0
     ) {
-      alert("庫存格式錯誤");
+      alert(
+        "庫存格式錯誤",
+      );
+
       return;
     }
 
     const productData = {
-      name: form.name.trim(),
-      category: form.category,
+      name:
+        form.name.trim(),
+
+      category:
+        form.category,
+
       price,
+
       stock,
-      status: form.status,
+
+      status:
+        form.status,
 
       description:
         form.description
@@ -214,11 +340,14 @@ export default function AdminPage() {
         undefined,
     };
 
-    if (editingId !== null) {
+    if (
+      editingId !== null
+    ) {
       const nextProducts =
         products.map(
           (product) =>
-            product.id === editingId
+            product.id ===
+            editingId
               ? {
                   ...product,
                   ...productData,
@@ -226,21 +355,28 @@ export default function AdminPage() {
               : product,
         );
 
-      updateProducts(nextProducts);
+      updateProducts(
+        nextProducts,
+      );
 
-      alert("商品修改完成");
+      alert(
+        "商品修改完成",
+      );
     } else {
-      const newProduct: Product = {
-        id: Date.now(),
-        ...productData,
-      };
+      const newProduct: Product =
+        {
+          id: Date.now(),
+          ...productData,
+        };
 
       updateProducts([
         newProduct,
         ...products,
       ]);
 
-      alert("商品新增完成");
+      alert(
+        "商品新增完成",
+      );
     }
 
     cancelEdit();
@@ -252,7 +388,8 @@ export default function AdminPage() {
     const nextProducts =
       products.map(
         (item) =>
-          item.id === product.id
+          item.id ===
+          product.id
             ? {
                 ...item,
 
@@ -265,7 +402,9 @@ export default function AdminPage() {
             : item,
       );
 
-    updateProducts(nextProducts);
+    updateProducts(
+      nextProducts,
+    );
   }
 
   function deleteProduct(
@@ -283,13 +422,17 @@ export default function AdminPage() {
     const nextProducts =
       products.filter(
         (item) =>
-          item.id !== product.id,
+          item.id !==
+          product.id,
       );
 
-    updateProducts(nextProducts);
+    updateProducts(
+      nextProducts,
+    );
 
     if (
-      editingId === product.id
+      editingId ===
+      product.id
     ) {
       cancelEdit();
     }
@@ -299,7 +442,8 @@ export default function AdminPage() {
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const file =
-      event.target.files?.[0];
+      event.target
+        .files?.[0];
 
     if (!file) {
       return;
@@ -317,7 +461,9 @@ export default function AdminPage() {
         "請選擇圖片檔案。",
       );
 
-      event.target.value = "";
+      event.target.value =
+        "";
+
       return;
     }
 
@@ -332,12 +478,16 @@ export default function AdminPage() {
         "原始圖片不可超過 15MB。",
       );
 
-      event.target.value = "";
+      event.target.value =
+        "";
+
       return;
     }
 
     try {
-      setCompressing(true);
+      setCompressing(
+        true,
+      );
 
       const compressedFile =
         await compressImage(
@@ -359,7 +509,9 @@ export default function AdminPage() {
       setForm(
         (current) => ({
           ...current,
-          imageUrl: dataUrl,
+
+          imageUrl:
+            dataUrl,
         }),
       );
 
@@ -385,13 +537,18 @@ export default function AdminPage() {
       );
     } catch (error) {
       setImageError(
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "圖片壓縮失敗",
       );
     } finally {
-      setCompressing(false);
-      event.target.value = "";
+      setCompressing(
+        false,
+      );
+
+      event.target.value =
+        "";
     }
   }
 
@@ -405,6 +562,60 @@ export default function AdminPage() {
 
     setImageInfo("");
     setImageError("");
+  }
+
+  async function logout() {
+    const supabase =
+      getSupabaseClient();
+
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+
+    router.replace(
+      "/login",
+    );
+  }
+
+  if (authChecking) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050910] text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-black">
+            鈦鼎資訊
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-400">
+            驗證管理員權限中...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (configurationError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050910] px-5 text-white">
+        <div className="w-full max-w-lg rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-8 text-center">
+          <h1 className="text-2xl font-black">
+            尚未完成後台登入設定
+          </h1>
+
+          <p className="mt-4 leading-7 text-yellow-100">
+            請先設定 Supabase
+            Project URL 與
+            Publishable Key。
+          </p>
+
+          <Link
+            href="/"
+            className="secondary-button mt-6"
+          >
+            返回網站
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -421,37 +632,56 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="secondary-button gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            返回網站
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/"
+              className="secondary-button gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              返回網站
+            </Link>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="secondary-button gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              登出
+            </button>
+          </div>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="商品總數"
-            value={statistics.total}
+            value={
+              statistics.total
+            }
             color="text-blue-400"
           />
 
           <StatCard
             title="上架商品"
-            value={statistics.online}
+            value={
+              statistics.online
+            }
             color="text-green-400"
           />
 
           <StatCard
             title="下架商品"
-            value={statistics.offline}
+            value={
+              statistics.offline
+            }
             color="text-orange-400"
           />
 
           <StatCard
             title="庫存總數"
-            value={statistics.stock}
+            value={
+              statistics.stock
+            }
             color="text-purple-400"
           />
         </section>
@@ -504,17 +734,25 @@ export default function AdminPage() {
 
                 <tbody>
                   {products.map(
-                    (product) => (
+                    (
+                      product,
+                    ) => (
                       <tr
-                        key={product.id}
+                        key={
+                          product.id
+                        }
                         className="border-t border-white/10"
                       >
                         <td className="px-4 py-4">
                           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
                             {product.imageUrl ? (
                               <img
-                                src={product.imageUrl}
-                                alt={product.name}
+                                src={
+                                  product.imageUrl
+                                }
+                                alt={
+                                  product.name
+                                }
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -527,7 +765,9 @@ export default function AdminPage() {
 
                         <td className="px-4 py-4">
                           <div className="font-bold">
-                            {product.name}
+                            {
+                              product.name
+                            }
                           </div>
 
                           <div className="mt-1 max-w-xs truncate text-xs text-slate-500">
@@ -538,7 +778,9 @@ export default function AdminPage() {
                         </td>
 
                         <td className="px-4 py-4 text-slate-300">
-                          {product.category}
+                          {
+                            product.category
+                          }
                         </td>
 
                         <td className="px-4 py-4 font-bold">
@@ -549,7 +791,9 @@ export default function AdminPage() {
                         </td>
 
                         <td className="px-4 py-4">
-                          {product.stock}
+                          {
+                            product.stock
+                          }
                         </td>
 
                         <td className="px-4 py-4">
@@ -567,7 +811,9 @@ export default function AdminPage() {
                                 : "rounded-full bg-orange-500/15 px-3 py-1 text-xs font-bold text-orange-400 transition hover:bg-orange-500/25"
                             }
                           >
-                            {product.status}
+                            {
+                              product.status
+                            }
                           </button>
                         </td>
 
@@ -647,17 +893,26 @@ export default function AdminPage() {
             </div>
 
             <form
-              onSubmit={saveProduct}
+              onSubmit={
+                saveProduct
+              }
               className="space-y-5"
             >
               <FormField label="商品名稱">
                 <input
-                  value={form.name}
-                  onChange={(event) =>
+                  value={
+                    form.name
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setForm({
                       ...form,
+
                       name:
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                     })
                   }
                   className="admin-input"
@@ -667,12 +922,19 @@ export default function AdminPage() {
 
               <FormField label="商品分類">
                 <select
-                  value={form.category}
-                  onChange={(event) =>
+                  value={
+                    form.category
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setForm({
                       ...form,
+
                       category:
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                     })
                   }
                   className="admin-input"
@@ -704,16 +966,22 @@ export default function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    value={form.price}
-                    onChange={(event) =>
+                    value={
+                      form.price
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setForm({
                         ...form,
+
                         price:
-                          event.target.value,
+                          event
+                            .target
+                            .value,
                       })
                     }
                     className="admin-input"
-                    placeholder="26900"
                   />
                 </FormField>
 
@@ -721,28 +989,40 @@ export default function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    value={form.stock}
-                    onChange={(event) =>
+                    value={
+                      form.stock
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setForm({
                         ...form,
+
                         stock:
-                          event.target.value,
+                          event
+                            .target
+                            .value,
                       })
                     }
                     className="admin-input"
-                    placeholder="10"
                   />
                 </FormField>
               </div>
 
               <FormField label="上下架狀態">
                 <select
-                  value={form.status}
-                  onChange={(event) =>
+                  value={
+                    form.status
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setForm({
                       ...form,
+
                       status:
-                        event.target
+                        event
+                          .target
                           .value as ProductStatus,
                     })
                   }
@@ -775,14 +1055,20 @@ export default function AdminPage() {
                   </span>
 
                   <span className="text-xs text-slate-500">
-                    自動轉成 WebP・最大 1600 × 1600
+                    自動轉成 WebP
+                    ・最大 1600 ×
+                    1600
                   </span>
 
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
-                    onChange={handleImageChange}
-                    disabled={compressing}
+                    onChange={
+                      handleImageChange
+                    }
+                    disabled={
+                      compressing
+                    }
                     className="hidden"
                   />
                 </label>
@@ -809,7 +1095,9 @@ export default function AdminPage() {
 
                     <button
                       type="button"
-                      onClick={removeImage}
+                      onClick={
+                        removeImage
+                      }
                       className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -818,7 +1106,9 @@ export default function AdminPage() {
                   </div>
 
                   <img
-                    src={form.imageUrl}
+                    src={
+                      form.imageUrl
+                    }
                     alt="商品圖片預覽"
                     className="h-56 w-full object-contain"
                   />
@@ -828,12 +1118,19 @@ export default function AdminPage() {
               <FormField label="商品說明">
                 <textarea
                   rows={7}
-                  value={form.description}
-                  onChange={(event) =>
+                  value={
+                    form.description
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setForm({
                       ...form,
+
                       description:
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                     })
                   }
                   className="admin-input resize-none"
@@ -849,7 +1146,9 @@ Intel Core i5
 
               <button
                 type="submit"
-                disabled={compressing}
+                disabled={
+                  compressing
+                }
                 className="primary-button w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {editingId ===
@@ -859,7 +1158,8 @@ Intel Core i5
                   <Save className="h-4 w-4" />
                 )}
 
-                {editingId === null
+                {editingId ===
+                null
                   ? "新增商品"
                   : "儲存修改"}
               </button>
@@ -868,7 +1168,9 @@ Intel Core i5
                 null && (
                 <button
                   type="button"
-                  onClick={cancelEdit}
+                  onClick={
+                    cancelEdit
+                  }
                   className="secondary-button w-full gap-2"
                 >
                   <X className="h-4 w-4" />
@@ -878,8 +1180,10 @@ Intel Core i5
             </form>
 
             <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-xs leading-6 text-yellow-200">
-              目前商品資料與圖片暫存在瀏覽器 localStorage。
-              正式接上雲端資料庫後，商品資料與圖片就能讓所有訪客同步看到。
+              目前商品資料與圖片仍暫存在瀏覽器
+              localStorage。
+              下一階段會改成雲端資料庫及
+              Storage，讓所有裝置同步看到相同商品。
             </div>
           </aside>
         </div>
@@ -889,7 +1193,12 @@ Intel Core i5
         .admin-input {
           width: 100%;
           border: 1px solid
-            rgba(255, 255, 255, 0.1);
+            rgba(
+              255,
+              255,
+              255,
+              0.1
+            );
           border-radius: 0.75rem;
           background: rgba(
             255,
@@ -897,7 +1206,8 @@ Intel Core i5
             255,
             0.04
           );
-          padding: 0.8rem 0.9rem;
+          padding: 0.8rem
+            0.9rem;
           color: white;
           outline: none;
           transition: 0.2s ease;
@@ -905,8 +1215,10 @@ Intel Core i5
 
         .admin-input:focus {
           border-color: #3b82f6;
-          box-shadow: 0 0 0
-            3px rgba(
+
+          box-shadow:
+            0 0 0 3px
+            rgba(
               59,
               130,
               246,
