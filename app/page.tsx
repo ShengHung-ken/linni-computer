@@ -13,11 +13,13 @@ import {
   HardDrive,
   Laptop,
   Mail,
+  Menu,
   MessageCircle,
   Monitor,
   ShieldCheck,
   ShoppingCart,
   Wrench,
+  X,
 } from "lucide-react";
 
 import {
@@ -42,6 +44,38 @@ const serviceIcons = [
   Monitor,
   Cpu,
 ];
+
+const navigationItems = [
+  {
+    label: "首頁",
+    href: "#home",
+  },
+  {
+    label: "商品專區",
+    href: "#products",
+  },
+  {
+    label: "服務項目",
+    href: "#services",
+  },
+  {
+    label: "關於我們",
+    href: "#about",
+  },
+  {
+    label: "聯絡我們",
+    href: "#contact",
+  },
+];
+
+const LINE_ADD_FRIEND_URL =
+  "https://lin.ee/PC2w13i";
+
+const LINE_QR_CODE_URL =
+  "https://qr-official.line.me/gs/M_068wtdkw_GW.png?oat_content=qr";
+
+const CONTACT_EMAIL =
+  "kevin7206160616@gmail.com";
 
 function formatPrice(
   price: number,
@@ -78,6 +112,11 @@ export default function HomePage() {
     setProductsError,
   ] = useState("");
 
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false);
+
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -110,15 +149,44 @@ export default function HomePage() {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    function handleResize() {
+      if (
+        window.innerWidth >= 1024
+      ) {
+        setMobileMenuOpen(false);
+      }
+    }
+
+    window.addEventListener(
+      "resize",
+      handleResize,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize,
+      );
+    };
+  }, []);
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+  }
+
   return (
     <main className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050910]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <Link
             href="/"
-            className="flex items-center gap-3"
+            className="flex min-w-0 items-center gap-3"
+            onClick={
+              closeMobileMenu
+            }
           >
-            <div className="flex h-14 w-20 items-center justify-center overflow-hidden rounded-xl bg-black/30">
+            <div className="flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/30">
               <Image
                 src="/titanium-it/logo-titanium.png"
                 alt="鈦鼎資訊"
@@ -129,60 +197,94 @@ export default function HomePage() {
               />
             </div>
 
-            <div>
-              <div className="text-xl font-black tracking-[0.15em]">
+            <div className="min-w-0">
+              <div className="whitespace-nowrap text-lg font-black tracking-[0.12em] sm:text-xl sm:tracking-[0.15em]">
                 鈦鼎資訊
               </div>
 
-              <div className="text-xs tracking-[0.2em] text-slate-400">
+              <div className="whitespace-nowrap text-[10px] tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em]">
                 TITANIUM IT
               </div>
             </div>
           </Link>
 
           <nav className="hidden items-center gap-7 text-sm text-slate-300 lg:flex">
-            <a
-              href="#home"
-              className="hover:text-white"
-            >
-              首頁
-            </a>
-
-            <a
-              href="#products"
-              className="hover:text-white"
-            >
-              商品專區
-            </a>
-
-            <a
-              href="#services"
-              className="hover:text-white"
-            >
-              服務項目
-            </a>
-
-            <a
-              href="#about"
-              className="hover:text-white"
-            >
-              關於我們
-            </a>
-
-            <a
-              href="#contact"
-              className="hover:text-white"
-            >
-              聯絡我們
-            </a>
-
+            {navigationItems.map(
+              (item) => (
+                <a
+                  key={
+                    item.href
+                  }
+                  href={
+                    item.href
+                  }
+                  className="transition hover:text-white"
+                >
+                  {
+                    item.label
+                  }
+                </a>
+              ),
+            )}
           </nav>
+
+          <button
+            type="button"
+            onClick={() =>
+              setMobileMenuOpen(
+                (current) =>
+                  !current,
+              )
+            }
+            aria-label={
+              mobileMenuOpen
+                ? "關閉選單"
+                : "開啟選單"
+            }
+            aria-expanded={
+              mobileMenuOpen
+            }
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white transition hover:border-blue-400/40 hover:bg-blue-500/10 lg:hidden"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="border-t border-white/10 bg-[#050910]/98 px-5 pb-5 pt-3 backdrop-blur-xl lg:hidden">
+            <nav className="mx-auto flex max-w-7xl flex-col gap-2">
+              {navigationItems.map(
+                (item) => (
+                  <a
+                    key={
+                      item.href
+                    }
+                    href={
+                      item.href
+                    }
+                    onClick={
+                      closeMobileMenu
+                    }
+                    className="rounded-xl border border-transparent px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-white"
+                  >
+                    {
+                      item.label
+                    }
+                  </a>
+                ),
+              )}
+            </nav>
+          </div>
+        )}
       </header>
 
       <section
         id="home"
-        className="tech-background border-b border-white/10"
+        className="tech-background scroll-mt-24 border-b border-white/10"
       >
         <div className="mx-auto grid min-h-[620px] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-2">
           <div>
@@ -192,12 +294,10 @@ export default function HomePage() {
 
             <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
               專業維修
-
               <span className="text-blue-400">
                 {" "}
                 ×{" "}
               </span>
-
               組裝升級
             </h1>
 
@@ -230,7 +330,7 @@ export default function HomePage() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-3xl" />
 
-            <div className="glass-panel relative overflow-hidden rounded-[2rem] p-8 shadow-2xl">
+            <div className="glass-panel relative overflow-hidden rounded-[2rem] p-6 shadow-2xl sm:p-8">
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="flex min-h-48 flex-col justify-between rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/20 to-transparent p-6">
                   <Monitor className="h-14 w-14 text-blue-300" />
@@ -278,7 +378,7 @@ export default function HomePage() {
 
       <section
         id="services"
-        className="mx-auto max-w-7xl px-5 py-20"
+        className="mx-auto max-w-7xl scroll-mt-24 px-5 py-20"
       >
         <div className="mb-10">
           <p className="text-sm font-bold tracking-widest text-blue-400">
@@ -332,7 +432,7 @@ export default function HomePage() {
 
       <section
         id="products"
-        className="bg-slate-100 py-20 text-slate-950"
+        className="scroll-mt-24 bg-slate-100 py-20 text-slate-950"
       >
         <div className="mx-auto max-w-7xl px-5">
           <div className="mb-10">
@@ -369,7 +469,9 @@ export default function HomePage() {
                 </div>
 
                 <p className="mt-2 text-sm text-red-500">
-                  {productsError}
+                  {
+                    productsError
+                  }
                 </p>
               </div>
             )}
@@ -435,7 +537,10 @@ export default function HomePage() {
                               <li
                                 key={`${product.id}-${index}`}
                               >
-                                • {item}
+                                •{" "}
+                                {
+                                  item
+                                }
                               </li>
                             ),
                           )}
@@ -472,7 +577,7 @@ export default function HomePage() {
 
       <section
         id="about"
-        className="mx-auto max-w-7xl px-5 py-20"
+        className="mx-auto max-w-7xl scroll-mt-24 px-5 py-20"
       >
         <div className="glass-panel grid gap-10 rounded-[2rem] p-7 md:p-10 lg:grid-cols-2">
           <div>
@@ -522,7 +627,7 @@ export default function HomePage() {
 
       <section
         id="contact"
-        className="border-t border-white/10 py-20"
+        className="scroll-mt-24 border-t border-white/10 py-20"
       >
         <div className="mx-auto max-w-7xl px-5">
           <h2 className="text-center text-4xl font-black">
@@ -543,19 +648,34 @@ export default function HomePage() {
 
               <div className="mx-auto mt-5 max-w-[220px] overflow-hidden rounded-2xl bg-white p-3">
                 <img
-                  src="https://qr-official.line.me/gs/M_068wtdkw_GW.png?oat_content=qr"
+                  src={
+                    LINE_QR_CODE_URL
+                  }
                   alt="鈦鼎資訊 LINE 官方帳號 QR Code"
                   className="h-auto w-full"
                 />
               </div>
 
-              <p className="mt-4 text-sm text-slate-400">
-                掃描 QR Code 加入 LINE 官方帳號
+              <p className="mt-4 text-sm leading-6 text-slate-400">
+                掃描 QR Code，
+                或直接點擊下方按鈕加入 LINE 官方帳號
               </p>
+
+              <a
+                href={
+                  LINE_ADD_FRIEND_URL
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#06c755] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#05b94f]"
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                加入 LINE 官方帳號
+              </a>
             </div>
 
             <a
-              href="mailto:kevin7206160616@gmail.com"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="glass-panel rounded-3xl p-6 text-center transition hover:border-blue-400/40"
             >
               <Mail className="mx-auto h-9 w-9 text-blue-400" />
@@ -565,7 +685,9 @@ export default function HomePage() {
               </h3>
 
               <p className="mt-2 break-all text-slate-400">
-                kevin7206160616@gmail.com
+                {
+                  CONTACT_EMAIL
+                }
               </p>
 
               <div className="mt-6 inline-flex rounded-xl bg-blue-500/10 px-5 py-3 text-sm font-semibold text-blue-300">
@@ -585,6 +707,18 @@ export default function HomePage() {
                 系統升級、零組件及商品相關問題，
                 歡迎透過 LINE 或 Email 聯絡。
               </p>
+
+              <a
+                href={
+                  LINE_ADD_FRIEND_URL
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10 px-5 py-3 text-sm font-bold text-green-300 transition hover:bg-green-500/20"
+              >
+                <MessageCircle className="mr-2 h-5 w-5" />
+                LINE 詢問
+              </a>
             </div>
           </div>
         </div>
