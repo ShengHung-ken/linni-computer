@@ -176,12 +176,6 @@ export default function HomePage() {
               聯絡我們
             </a>
 
-            <Link
-              href="/login"
-              className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-blue-300 transition hover:bg-blue-500/20"
-            >
-              後台登入
-            </Link>
           </nav>
         </div>
       </header>
