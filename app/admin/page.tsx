@@ -30,18 +30,28 @@ import {
 } from "@/lib/image";
 
 import {
-  loadProducts,
+  deleteProductImageByPath,
+  safelyDeleteProductImage,
+  uploadProductImage,
+} from "@/lib/product-storage";
+
+import type {
   Product,
   ProductStatus,
-  saveProducts,
 } from "@/lib/products";
 
 import {
-  getSupabaseClient,
-} from "@/lib/supabase";
+  createProduct,
+  deleteProduct as deleteSupabaseProduct,
+  fetchAdminProducts,
+  type ProductInput,
+  updateProduct,
+  updateProductStatus,
+} from "@/lib/supabase-products";
 
-const ADMIN_EMAIL =
-  "kevin7206160616@gmail.com";
+import { getSupabaseClient } from "@/lib/supabase";
+
+const ADMIN_EMAIL = "kevin7206160616@gmail.com";
 
 interface ProductForm {
   name: string;
@@ -63,185 +73,143 @@ const emptyForm: ProductForm = {
   imageUrl: "",
 };
 
-function formatPrice(
-  price: number,
-) {
-  return new Intl.NumberFormat(
-    "zh-TW",
-  ).format(price);
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat("zh-TW").format(price);
+}
+
+function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 export default function AdminPage() {
   const router = useRouter();
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [form, setForm] = useState<ProductForm>(emptyForm);
 
-  const [form, setForm] =
-    useState<ProductForm>(
-      emptyForm,
-    );
+  const [editingId, setEditingId] = useState<number | null>(
+    null,
+  );
 
-  const [editingId, setEditingId] =
-    useState<number | null>(
-      null,
-    );
+  const [pendingImageFile, setPendingImageFile] =
+    useState<File | null>(null);
 
-  const [
-    compressing,
-    setCompressing,
-  ] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [
-    imageInfo,
-    setImageInfo,
-  ] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(
+    null,
+  );
 
-  const [
-    imageError,
-    setImageError,
-  ] = useState("");
+  const [updatingStatusId, setUpdatingStatusId] = useState<
+    number | null
+  >(null);
 
-  const [
-    authChecking,
-    setAuthChecking,
-  ] = useState(true);
+  const [imageInfo, setImageInfo] = useState("");
+  const [imageError, setImageError] = useState("");
 
-  const [
-    configurationError,
-    setConfigurationError,
-  ] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  const [configurationError, setConfigurationError] =
+    useState(false);
+
+  const [pageError, setPageError] = useState("");
 
   useEffect(() => {
     async function initialize() {
-      const supabase =
-        getSupabaseClient();
+      const supabase = getSupabaseClient();
 
       if (!supabase) {
-        setConfigurationError(
-          true,
-        );
-
+        setConfigurationError(true);
         setAuthChecking(false);
-
         return;
       }
 
       const {
         data: { user },
-      } =
-        await supabase.auth.getUser();
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (
+        userError ||
         !user ||
-        user.email !==
-          ADMIN_EMAIL
+        user.email !== ADMIN_EMAIL
       ) {
-        router.replace(
-          "/login",
-        );
-
+        router.replace("/login");
         return;
       }
 
-      setProducts(
-        loadProducts(),
-      );
+      try {
+        const currentProducts =
+          await fetchAdminProducts();
 
-      setAuthChecking(false);
+        setProducts(currentProducts);
+      } catch (error) {
+        setPageError(
+          getErrorMessage(
+            error,
+            "無法讀取商品資料。",
+          ),
+        );
+      } finally {
+        setAuthChecking(false);
+      }
     }
 
     initialize();
   }, [router]);
 
-  function updateProducts(
-    nextProducts: Product[],
-  ) {
-    setProducts(
-      nextProducts,
+  const statistics = useMemo(() => {
+    const online = products.filter(
+      (product) => product.status === "上架",
+    ).length;
+
+    const offline = products.filter(
+      (product) => product.status === "下架",
+    ).length;
+
+    const stock = products.reduce(
+      (total, product) => total + product.stock,
+      0,
     );
 
-    try {
-      saveProducts(
-        nextProducts,
-      );
-    } catch {
-      alert(
-        "瀏覽器儲存空間不足。正式版會將圖片改存雲端 Storage。",
-      );
-    }
+    return {
+      total: products.length,
+      online,
+      offline,
+      stock,
+    };
+  }, [products]);
+
+  function resetForm() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setPendingImageFile(null);
+    setImageInfo("");
+    setImageError("");
   }
 
-  const statistics =
-    useMemo(() => {
-      const online =
-        products.filter(
-          (product) =>
-            product.status ===
-            "上架",
-        ).length;
-
-      const offline =
-        products.filter(
-          (product) =>
-            product.status ===
-            "下架",
-        ).length;
-
-      const stock =
-        products.reduce(
-          (
-            total,
-            product,
-          ) =>
-            total +
-            product.stock,
-          0,
-        );
-
-      return {
-        total:
-          products.length,
-        online,
-        offline,
-        stock,
-      };
-    }, [products]);
-
-  function startEdit(
-    product: Product,
-  ) {
-    setEditingId(
-      product.id,
-    );
+  function startEdit(product: Product) {
+    setEditingId(product.id);
 
     setForm({
       name: product.name,
-
-      category:
-        product.category,
-
-      price: String(
-        product.price,
-      ),
-
-      stock: String(
-        product.stock,
-      ),
-
-      status:
-        product.status,
-
-      description:
-        product.description.join(
-          "\n",
-        ),
-
-      imageUrl:
-        product.imageUrl ??
-        "",
+      category: product.category,
+      price: String(product.price),
+      stock: String(product.stock),
+      status: product.status,
+      description: product.description.join("\n"),
+      imageUrl: product.imageUrl ?? "",
     });
 
+    setPendingImageFile(null);
     setImageInfo("");
     setImageError("");
 
@@ -252,198 +220,13 @@ export default function AdminPage() {
   }
 
   function cancelEdit() {
-    setEditingId(null);
-
-    setForm(
-      emptyForm,
-    );
-
-    setImageInfo("");
-    setImageError("");
-  }
-
-  function saveProduct(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-
-    if (!form.name.trim()) {
-      alert(
-        "請輸入商品名稱",
-      );
-
-      return;
-    }
-
-    if (!form.price) {
-      alert(
-        "請輸入商品價格",
-      );
-
-      return;
-    }
-
-    const price =
-      Number(form.price);
-
-    const stock =
-      Number(
-        form.stock || 0,
-      );
-
-    if (
-      Number.isNaN(price) ||
-      price < 0
-    ) {
-      alert(
-        "商品價格格式錯誤",
-      );
-
-      return;
-    }
-
-    if (
-      Number.isNaN(stock) ||
-      stock < 0
-    ) {
-      alert(
-        "庫存格式錯誤",
-      );
-
-      return;
-    }
-
-    const productData = {
-      name:
-        form.name.trim(),
-
-      category:
-        form.category,
-
-      price,
-
-      stock,
-
-      status:
-        form.status,
-
-      description:
-        form.description
-          .split("\n")
-          .map((item) =>
-            item.trim(),
-          )
-          .filter(Boolean),
-
-      imageUrl:
-        form.imageUrl ||
-        undefined,
-    };
-
-    if (
-      editingId !== null
-    ) {
-      const nextProducts =
-        products.map(
-          (product) =>
-            product.id ===
-            editingId
-              ? {
-                  ...product,
-                  ...productData,
-                }
-              : product,
-        );
-
-      updateProducts(
-        nextProducts,
-      );
-
-      alert(
-        "商品修改完成",
-      );
-    } else {
-      const newProduct: Product =
-        {
-          id: Date.now(),
-          ...productData,
-        };
-
-      updateProducts([
-        newProduct,
-        ...products,
-      ]);
-
-      alert(
-        "商品新增完成",
-      );
-    }
-
-    cancelEdit();
-  }
-
-  function toggleStatus(
-    product: Product,
-  ) {
-    const nextProducts =
-      products.map(
-        (item) =>
-          item.id ===
-          product.id
-            ? {
-                ...item,
-
-                status:
-                  item.status ===
-                  "上架"
-                    ? ("下架" as ProductStatus)
-                    : ("上架" as ProductStatus),
-              }
-            : item,
-      );
-
-    updateProducts(
-      nextProducts,
-    );
-  }
-
-  function deleteProduct(
-    product: Product,
-  ) {
-    const confirmed =
-      window.confirm(
-        `確定要刪除「${product.name}」嗎？`,
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const nextProducts =
-      products.filter(
-        (item) =>
-          item.id !==
-          product.id,
-      );
-
-    updateProducts(
-      nextProducts,
-    );
-
-    if (
-      editingId ===
-      product.id
-    ) {
-      cancelEdit();
-    }
+    resetForm();
   }
 
   async function handleImageChange(
     event: ChangeEvent<HTMLInputElement>,
   ) {
-    const file =
-      event.target
-        .files?.[0];
+    const file = event.target.files?.[0];
 
     if (!file) {
       return;
@@ -452,68 +235,39 @@ export default function AdminPage() {
     setImageError("");
     setImageInfo("");
 
-    if (
-      !file.type.startsWith(
-        "image/",
-      )
-    ) {
-      setImageError(
-        "請選擇圖片檔案。",
-      );
-
-      event.target.value =
-        "";
-
+    if (!file.type.startsWith("image/")) {
+      setImageError("請選擇圖片檔案。");
+      event.target.value = "";
       return;
     }
 
-    const maxOriginalSize =
-      15 * 1024 * 1024;
+    const maxOriginalSize = 15 * 1024 * 1024;
 
-    if (
-      file.size >
-      maxOriginalSize
-    ) {
-      setImageError(
-        "原始圖片不可超過 15MB。",
-      );
-
-      event.target.value =
-        "";
-
+    if (file.size > maxOriginalSize) {
+      setImageError("原始圖片不可超過 15MB。");
+      event.target.value = "";
       return;
     }
 
     try {
-      setCompressing(
-        true,
-      );
+      setCompressing(true);
 
-      const compressedFile =
-        await compressImage(
-          file,
-          {
-            maxWidth: 1600,
-            maxHeight: 1600,
-            quality: 0.8,
-            mimeType:
-              "image/webp",
-          },
-        );
+      const compressedFile = await compressImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.8,
+        mimeType: "image/webp",
+      });
 
-      const dataUrl =
-        await fileToDataUrl(
-          compressedFile,
-        );
+      const previewUrl =
+        await fileToDataUrl(compressedFile);
 
-      setForm(
-        (current) => ({
-          ...current,
+      setPendingImageFile(compressedFile);
 
-          imageUrl:
-            dataUrl,
-        }),
-      );
+      setForm((current) => ({
+        ...current,
+        imageUrl: previewUrl,
+      }));
 
       const savedPercent =
         file.size > 0
@@ -537,44 +291,298 @@ export default function AdminPage() {
       );
     } catch (error) {
       setImageError(
-        error instanceof
-          Error
-          ? error.message
-          : "圖片壓縮失敗",
+        getErrorMessage(
+          error,
+          "圖片壓縮失敗。",
+        ),
       );
     } finally {
-      setCompressing(
-        false,
-      );
-
-      event.target.value =
-        "";
+      setCompressing(false);
+      event.target.value = "";
     }
   }
 
   function removeImage() {
-    setForm(
-      (current) => ({
-        ...current,
-        imageUrl: "",
-      }),
-    );
+    setPendingImageFile(null);
+
+    setForm((current) => ({
+      ...current,
+      imageUrl: "",
+    }));
 
     setImageInfo("");
     setImageError("");
   }
 
+  function validateProduct(): ProductInput | null {
+    const name = form.name.trim();
+    const price = Number(form.price);
+    const stock = Number(form.stock || 0);
+
+    if (!name) {
+      alert("請輸入商品名稱。");
+      return null;
+    }
+
+    if (!form.price.trim()) {
+      alert("請輸入商品價格。");
+      return null;
+    }
+
+    if (
+      !Number.isFinite(price) ||
+      price < 0
+    ) {
+      alert("商品價格格式錯誤。");
+      return null;
+    }
+
+    if (
+      !Number.isFinite(stock) ||
+      stock < 0
+    ) {
+      alert("庫存格式錯誤。");
+      return null;
+    }
+
+    return {
+      name,
+      category: form.category,
+      price,
+      stock,
+      status: form.status,
+      description: form.description
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      imageUrl: undefined,
+    };
+  }
+
+  async function saveProduct(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (compressing || saving) {
+      return;
+    }
+
+    const productInput = validateProduct();
+
+    if (!productInput) {
+      return;
+    }
+
+    const existingProduct =
+      editingId !== null
+        ? products.find(
+            (product) =>
+              product.id === editingId,
+          )
+        : undefined;
+
+    let uploadedImagePath: string | null = null;
+
+    try {
+      setSaving(true);
+      setPageError("");
+
+      let finalImageUrl: string | undefined;
+
+      if (pendingImageFile) {
+        const uploadedImage =
+          await uploadProductImage(
+            pendingImageFile,
+          );
+
+        uploadedImagePath =
+          uploadedImage.path;
+
+        finalImageUrl =
+          uploadedImage.publicUrl;
+      } else if (
+        form.imageUrl &&
+        !form.imageUrl.startsWith("data:")
+      ) {
+        finalImageUrl =
+          form.imageUrl;
+      }
+
+      const payload: ProductInput = {
+        ...productInput,
+        imageUrl: finalImageUrl,
+      };
+
+      if (editingId !== null) {
+        const updatedProduct =
+          await updateProduct(
+            editingId,
+            payload,
+          );
+
+        setProducts((current) =>
+          current.map((product) =>
+            product.id === editingId
+              ? updatedProduct
+              : product,
+          ),
+        );
+
+        if (
+          existingProduct?.imageUrl &&
+          existingProduct.imageUrl !==
+            updatedProduct.imageUrl
+        ) {
+          await safelyDeleteProductImage(
+            existingProduct.imageUrl,
+          );
+        }
+
+        alert("商品修改完成。");
+      } else {
+        const newProduct =
+          await createProduct(payload);
+
+        setProducts((current) => [
+          newProduct,
+          ...current,
+        ]);
+
+        alert("商品新增完成。");
+      }
+
+      resetForm();
+    } catch (error) {
+      /*
+       * 圖片已上傳，但 Database 操作失敗時，
+       * 把新圖片刪除，避免 Storage 留下孤兒檔案。
+       */
+      if (uploadedImagePath) {
+        try {
+          await deleteProductImageByPath(
+            uploadedImagePath,
+          );
+        } catch (cleanupError) {
+          console.error(
+            "清除未使用的新圖片失敗：",
+            cleanupError,
+          );
+        }
+      }
+
+      const message = getErrorMessage(
+        error,
+        "商品儲存失敗。",
+      );
+
+      setPageError(message);
+      alert(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleStatus(
+    product: Product,
+  ) {
+    if (updatingStatusId !== null) {
+      return;
+    }
+
+    const nextStatus: ProductStatus =
+      product.status === "上架"
+        ? "下架"
+        : "上架";
+
+    try {
+      setUpdatingStatusId(product.id);
+      setPageError("");
+
+      const updatedProduct =
+        await updateProductStatus(
+          product.id,
+          nextStatus,
+        );
+
+      setProducts((current) =>
+        current.map((item) =>
+          item.id === product.id
+            ? updatedProduct
+            : item,
+        ),
+      );
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        "更新商品狀態失敗。",
+      );
+
+      setPageError(message);
+      alert(message);
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  }
+
+  async function deleteProduct(
+    product: Product,
+  ) {
+    const confirmed = window.confirm(
+      `確定要刪除「${product.name}」嗎？`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(product.id);
+      setPageError("");
+
+      await deleteSupabaseProduct(
+        product.id,
+      );
+
+      setProducts((current) =>
+        current.filter(
+          (item) =>
+            item.id !== product.id,
+        ),
+      );
+
+      await safelyDeleteProductImage(
+        product.imageUrl,
+      );
+
+      if (
+        editingId === product.id
+      ) {
+        resetForm();
+      }
+
+      alert("商品已刪除。");
+    } catch (error) {
+      const message = getErrorMessage(
+        error,
+        "刪除商品失敗。",
+      );
+
+      setPageError(message);
+      alert(message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function logout() {
-    const supabase =
-      getSupabaseClient();
+    const supabase = getSupabaseClient();
 
     if (supabase) {
       await supabase.auth.signOut();
     }
 
-    router.replace(
-      "/login",
-    );
+    router.replace("/login");
   }
 
   if (authChecking) {
@@ -586,7 +594,7 @@ export default function AdminPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-400">
-            驗證管理員權限中...
+            驗證管理員權限並讀取商品資料中...
           </p>
         </div>
       </main>
@@ -598,13 +606,14 @@ export default function AdminPage() {
       <main className="flex min-h-screen items-center justify-center bg-[#050910] px-5 text-white">
         <div className="w-full max-w-lg rounded-3xl border border-yellow-500/20 bg-yellow-500/10 p-8 text-center">
           <h1 className="text-2xl font-black">
-            尚未完成後台登入設定
+            尚未完成 Supabase 設定
           </h1>
 
           <p className="mt-4 leading-7 text-yellow-100">
-            請先設定 Supabase
-            Project URL 與
-            Publishable Key。
+            請確認
+            NEXT_PUBLIC_SUPABASE_URL 與
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+            已正確設定。
           </p>
 
           <Link
@@ -628,7 +637,7 @@ export default function AdminPage() {
             </h1>
 
             <p className="mt-2 text-slate-400">
-              商品新增、維護、圖片壓縮、庫存與上下架管理
+              Supabase 雲端商品、圖片、庫存與上下架管理
             </p>
           </div>
 
@@ -652,36 +661,34 @@ export default function AdminPage() {
           </div>
         </header>
 
+        {pageError && (
+          <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+            {pageError}
+          </div>
+        )}
+
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             title="商品總數"
-            value={
-              statistics.total
-            }
+            value={statistics.total}
             color="text-blue-400"
           />
 
           <StatCard
             title="上架商品"
-            value={
-              statistics.online
-            }
+            value={statistics.online}
             color="text-green-400"
           />
 
           <StatCard
             title="下架商品"
-            value={
-              statistics.offline
-            }
+            value={statistics.offline}
             color="text-orange-400"
           />
 
           <StatCard
             title="庫存總數"
-            value={
-              statistics.stock
-            }
+            value={statistics.stock}
             color="text-purple-400"
           />
         </section>
@@ -694,7 +701,7 @@ export default function AdminPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                點擊狀態可快速切換上架／下架
+                商品資料已儲存在 Supabase Database
               </p>
             </div>
 
@@ -705,27 +712,21 @@ export default function AdminPage() {
                     <th className="px-4 py-4">
                       圖片
                     </th>
-
                     <th className="px-4 py-4">
                       商品名稱
                     </th>
-
                     <th className="px-4 py-4">
                       分類
                     </th>
-
                     <th className="px-4 py-4">
                       價格
                     </th>
-
                     <th className="px-4 py-4">
                       庫存
                     </th>
-
                     <th className="px-4 py-4">
                       狀態
                     </th>
-
                     <th className="px-4 py-4">
                       操作
                     </th>
@@ -733,131 +734,123 @@ export default function AdminPage() {
                 </thead>
 
                 <tbody>
-                  {products.map(
-                    (
-                      product,
-                    ) => (
-                      <tr
-                        key={
-                          product.id
-                        }
-                        className="border-t border-white/10"
-                      >
-                        <td className="px-4 py-4">
-                          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                            {product.imageUrl ? (
-                              <img
-                                src={
-                                  product.imageUrl
-                                }
-                                alt={
-                                  product.name
-                                }
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-[10px] text-slate-500">
-                                無圖片
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <div className="font-bold">
-                            {
-                              product.name
-                            }
-                          </div>
-
-                          <div className="mt-1 max-w-xs truncate text-xs text-slate-500">
-                            {product.description.join(
-                              " / ",
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-4 text-slate-300">
-                          {
-                            product.category
-                          }
-                        </td>
-
-                        <td className="px-4 py-4 font-bold">
-                          NT$
-                          {formatPrice(
-                            product.price,
+                  {products.map((product) => (
+                    <tr
+                      key={product.id}
+                      className="border-t border-white/10"
+                    >
+                      <td className="px-4 py-4">
+                        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] text-slate-500">
+                              無圖片
+                            </span>
                           )}
-                        </td>
+                        </div>
+                      </td>
 
-                        <td className="px-4 py-4">
-                          {
-                            product.stock
+                      <td className="px-4 py-4">
+                        <div className="font-bold">
+                          {product.name}
+                        </div>
+
+                        <div className="mt-1 max-w-xs truncate text-xs text-slate-500">
+                          {product.description.join(
+                            " / ",
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-slate-300">
+                        {product.category}
+                      </td>
+
+                      <td className="px-4 py-4 font-bold">
+                        NT$
+                        {formatPrice(
+                          product.price,
+                        )}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {product.stock}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <button
+                          type="button"
+                          disabled={
+                            updatingStatusId ===
+                            product.id
                           }
-                        </td>
+                          onClick={() =>
+                            toggleStatus(
+                              product,
+                            )
+                          }
+                          className={
+                            product.status ===
+                            "上架"
+                              ? "rounded-full bg-green-500/15 px-3 py-1 text-xs font-bold text-green-400 transition hover:bg-green-500/25 disabled:opacity-50"
+                              : "rounded-full bg-orange-500/15 px-3 py-1 text-xs font-bold text-orange-400 transition hover:bg-orange-500/25 disabled:opacity-50"
+                          }
+                        >
+                          {updatingStatusId ===
+                          product.id
+                            ? "更新中..."
+                            : product.status}
+                        </button>
+                      </td>
 
-                        <td className="px-4 py-4">
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() =>
-                              toggleStatus(
+                              startEdit(
                                 product,
                               )
                             }
-                            className={
-                              product.status ===
-                              "上架"
-                                ? "rounded-full bg-green-500/15 px-3 py-1 text-xs font-bold text-green-400 transition hover:bg-green-500/25"
-                                : "rounded-full bg-orange-500/15 px-3 py-1 text-xs font-bold text-orange-400 transition hover:bg-orange-500/25"
-                            }
+                            className="rounded-lg bg-blue-500/10 p-2 text-blue-400 transition hover:bg-blue-500/20"
+                            title="編輯商品"
                           >
-                            {
-                              product.status
-                            }
+                            <Pencil className="h-4 w-4" />
                           </button>
-                        </td>
 
-                        <td className="px-4 py-4">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                startEdit(
-                                  product,
-                                )
-                              }
-                              className="rounded-lg bg-blue-500/10 p-2 text-blue-400 transition hover:bg-blue-500/20"
-                              title="編輯商品"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
+                          <button
+                            type="button"
+                            disabled={
+                              deletingId ===
+                              product.id
+                            }
+                            onClick={() =>
+                              deleteProduct(
+                                product,
+                              )
+                            }
+                            className="rounded-lg bg-red-500/10 p-2 text-red-400 transition hover:bg-red-500/20 disabled:opacity-50"
+                            title="刪除商品"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                deleteProduct(
-                                  product,
-                                )
-                              }
-                              className="rounded-lg bg-red-500/10 p-2 text-red-400 transition hover:bg-red-500/20"
-                              title="刪除商品"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ),
-                  )}
-
-                  {products.length ===
-                    0 && (
+                  {products.length === 0 && (
                     <tr>
                       <td
                         colSpan={7}
                         className="p-10 text-center text-slate-500"
                       >
-                        尚未建立任何商品
+                        Supabase 目前尚未建立任何商品
                       </td>
                     </tr>
                   )}
@@ -868,8 +861,7 @@ export default function AdminPage() {
 
           <aside className="rounded-3xl border border-white/10 bg-[#0b111d] p-6">
             <div className="mb-6 flex items-center gap-3">
-              {editingId ===
-              null ? (
+              {editingId === null ? (
                 <Plus className="text-blue-400" />
               ) : (
                 <Pencil className="text-blue-400" />
@@ -877,14 +869,12 @@ export default function AdminPage() {
 
               <div>
                 <h2 className="text-xl font-black">
-                  {editingId ===
-                  null
+                  {editingId === null
                     ? "新增商品"
                     : "編輯商品"}
                 </h2>
 
-                {editingId !==
-                  null && (
+                {editingId !== null && (
                   <p className="mt-1 text-xs text-slate-500">
                     修改完成後請按「儲存修改」
                   </p>
@@ -893,26 +883,16 @@ export default function AdminPage() {
             </div>
 
             <form
-              onSubmit={
-                saveProduct
-              }
+              onSubmit={saveProduct}
               className="space-y-5"
             >
               <FormField label="商品名稱">
                 <input
-                  value={
-                    form.name
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.name}
+                  onChange={(event) =>
                     setForm({
                       ...form,
-
-                      name:
-                        event
-                          .target
-                          .value,
+                      name: event.target.value,
                     })
                   }
                   className="admin-input"
@@ -922,42 +902,21 @@ export default function AdminPage() {
 
               <FormField label="商品分類">
                 <select
-                  value={
-                    form.category
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.category}
+                  onChange={(event) =>
                     setForm({
                       ...form,
-
                       category:
-                        event
-                          .target
-                          .value,
+                        event.target.value,
                     })
                   }
                   className="admin-input"
                 >
-                  <option>
-                    電腦主機
-                  </option>
-
-                  <option>
-                    筆記型電腦
-                  </option>
-
-                  <option>
-                    零組件
-                  </option>
-
-                  <option>
-                    周邊配件
-                  </option>
-
-                  <option>
-                    二手商品
-                  </option>
+                  <option>電腦主機</option>
+                  <option>筆記型電腦</option>
+                  <option>零組件</option>
+                  <option>周邊配件</option>
+                  <option>二手商品</option>
                 </select>
               </FormField>
 
@@ -966,19 +925,12 @@ export default function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    value={
-                      form.price
-                    }
-                    onChange={(
-                      event,
-                    ) =>
+                    value={form.price}
+                    onChange={(event) =>
                       setForm({
                         ...form,
-
                         price:
-                          event
-                            .target
-                            .value,
+                          event.target.value,
                       })
                     }
                     className="admin-input"
@@ -989,19 +941,12 @@ export default function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    value={
-                      form.stock
-                    }
-                    onChange={(
-                      event,
-                    ) =>
+                    value={form.stock}
+                    onChange={(event) =>
                       setForm({
                         ...form,
-
                         stock:
-                          event
-                            .target
-                            .value,
+                          event.target.value,
                       })
                     }
                     className="admin-input"
@@ -1011,18 +956,12 @@ export default function AdminPage() {
 
               <FormField label="上下架狀態">
                 <select
-                  value={
-                    form.status
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.status}
+                  onChange={(event) =>
                     setForm({
                       ...form,
-
                       status:
-                        event
-                          .target
+                        event.target
                           .value as ProductStatus,
                     })
                   }
@@ -1031,7 +970,6 @@ export default function AdminPage() {
                   <option value="上架">
                     上架
                   </option>
-
                   <option value="下架">
                     下架
                   </option>
@@ -1055,19 +993,18 @@ export default function AdminPage() {
                   </span>
 
                   <span className="text-xs text-slate-500">
-                    自動轉成 WebP
-                    ・最大 1600 ×
-                    1600
+                    自動轉成 WebP・最大 1600 × 1600
                   </span>
 
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={
                       handleImageChange
                     }
                     disabled={
-                      compressing
+                      compressing ||
+                      saving
                     }
                     className="hidden"
                   />
@@ -1095,9 +1032,7 @@ export default function AdminPage() {
 
                     <button
                       type="button"
-                      onClick={
-                        removeImage
-                      }
+                      onClick={removeImage}
                       className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -1106,9 +1041,7 @@ export default function AdminPage() {
                   </div>
 
                   <img
-                    src={
-                      form.imageUrl
-                    }
+                    src={form.imageUrl}
                     alt="商品圖片預覽"
                     className="h-56 w-full object-contain"
                   />
@@ -1118,19 +1051,12 @@ export default function AdminPage() {
               <FormField label="商品說明">
                 <textarea
                   rows={7}
-                  value={
-                    form.description
-                  }
-                  onChange={(
-                    event,
-                  ) =>
+                  value={form.description}
+                  onChange={(event) =>
                     setForm({
                       ...form,
-
                       description:
-                        event
-                          .target
-                          .value,
+                        event.target.value,
                     })
                   }
                   className="admin-input resize-none"
@@ -1147,31 +1073,30 @@ Intel Core i5
               <button
                 type="submit"
                 disabled={
-                  compressing
+                  compressing ||
+                  saving
                 }
                 className="primary-button w-full gap-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editingId ===
-                null ? (
+                {editingId === null ? (
                   <Plus className="h-4 w-4" />
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
 
-                {editingId ===
-                null
-                  ? "新增商品"
-                  : "儲存修改"}
+                {saving
+                  ? "儲存中..."
+                  : editingId === null
+                    ? "新增商品"
+                    : "儲存修改"}
               </button>
 
-              {editingId !==
-                null && (
+              {editingId !== null && (
                 <button
                   type="button"
-                  onClick={
-                    cancelEdit
-                  }
-                  className="secondary-button w-full gap-2"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                  className="secondary-button w-full gap-2 disabled:opacity-50"
                 >
                   <X className="h-4 w-4" />
                   取消編輯
@@ -1179,11 +1104,11 @@ Intel Core i5
               )}
             </form>
 
-            <div className="mt-6 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-xs leading-6 text-yellow-200">
-              目前商品資料與圖片仍暫存在瀏覽器
-              localStorage。
-              下一階段會改成雲端資料庫及
-              Storage，讓所有裝置同步看到相同商品。
+            <div className="mt-6 rounded-2xl border border-green-500/20 bg-green-500/5 p-4 text-xs leading-6 text-green-200">
+              商品資料已改為 Supabase Database，
+              商品圖片會先自動壓縮成 WebP，
+              再上傳至 Supabase Storage。
+              不再使用瀏覽器 localStorage 儲存商品。
             </div>
           </aside>
         </div>
@@ -1193,12 +1118,7 @@ Intel Core i5
         .admin-input {
           width: 100%;
           border: 1px solid
-            rgba(
-              255,
-              255,
-              255,
-              0.1
-            );
+            rgba(255, 255, 255, 0.1);
           border-radius: 0.75rem;
           background: rgba(
             255,
@@ -1206,8 +1126,7 @@ Intel Core i5
             255,
             0.04
           );
-          padding: 0.8rem
-            0.9rem;
+          padding: 0.8rem 0.9rem;
           color: white;
           outline: none;
           transition: 0.2s ease;
@@ -1215,15 +1134,8 @@ Intel Core i5
 
         .admin-input:focus {
           border-color: #3b82f6;
-
-          box-shadow:
-            0 0 0 3px
-            rgba(
-              59,
-              130,
-              246,
-              0.12
-            );
+          box-shadow: 0 0 0 3px
+            rgba(59, 130, 246, 0.12);
         }
 
         .admin-input option {

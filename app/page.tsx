@@ -24,10 +24,13 @@ import {
   services,
 } from "@/lib/data";
 
-import {
-  loadProducts,
+import type {
   Product,
 } from "@/lib/products";
+
+import {
+  fetchPublicProducts,
+} from "@/lib/supabase-products";
 
 const serviceIcons = [
   Laptop,
@@ -42,57 +45,69 @@ const serviceIcons = [
 
 function formatPrice(
   price: number,
-) {
+): string {
   return new Intl.NumberFormat(
     "zh-TW",
   ).format(price);
+}
+
+function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 export default function HomePage() {
   const [
     products,
     setProducts,
-  ] = useState<Product[]>(
-    [],
-  );
+  ] = useState<Product[]>([]);
+
+  const [
+    productsLoading,
+    setProductsLoading,
+  ] = useState(true);
+
+  const [
+    productsError,
+    setProductsError,
+  ] = useState("");
 
   useEffect(() => {
-    function refreshProducts() {
-      const currentProducts =
-        loadProducts().filter(
-          (product) =>
-            product.status ===
-            "上架",
+    async function loadProducts() {
+      try {
+        setProductsLoading(true);
+        setProductsError("");
+
+        const currentProducts =
+          await fetchPublicProducts();
+
+        setProducts(
+          currentProducts,
+        );
+      } catch (error) {
+        console.error(
+          "讀取商品失敗：",
+          error,
         );
 
-      setProducts(
-        currentProducts,
-      );
+        setProductsError(
+          getErrorMessage(
+            error,
+            "目前無法讀取商品資料。",
+          ),
+        );
+      } finally {
+        setProductsLoading(false);
+      }
     }
 
-    refreshProducts();
-
-    window.addEventListener(
-      "linni-products-updated",
-      refreshProducts,
-    );
-
-    window.addEventListener(
-      "storage",
-      refreshProducts,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "linni-products-updated",
-        refreshProducts,
-      );
-
-      window.removeEventListener(
-        "storage",
-        refreshProducts,
-      );
-    };
+    loadProducts();
   }, []);
 
   return (
@@ -185,7 +200,8 @@ export default function HomePage() {
               專業維修
 
               <span className="text-blue-400">
-                {" "}×{" "}
+                {" "}
+                ×{" "}
               </span>
 
               組裝升級
@@ -335,95 +351,128 @@ export default function HomePage() {
             </h2>
 
             <p className="mt-3 text-sm text-slate-500">
-              商品內容由後台管理
+              商品內容由鈦鼎資訊後台即時管理
             </p>
           </div>
 
-          {products.length ===
-          0 ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-              目前尚無上架商品
-            </div>
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {products.map(
-                (product) => (
-                  <article
-                    key={
-                      product.id
-                    }
-                    className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-                  >
-                    <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 to-slate-700">
-                      {product.imageUrl ? (
-                        <img
-                          src={
-                            product.imageUrl
-                          }
-                          alt={
-                            product.name
-                          }
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Cpu className="h-20 w-20 text-blue-300" />
-                      )}
-                    </div>
+          {productsLoading && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center">
+              <div className="text-lg font-bold text-slate-700">
+                商品讀取中...
+              </div>
 
-                    <div className="p-5">
-                      <div className="mb-2 text-xs font-bold text-blue-600">
-                        {
-                          product.category
-                        }
-                      </div>
-
-                      <h3 className="min-h-14 text-lg font-black">
-                        {
-                          product.name
-                        }
-                      </h3>
-
-                      <ul className="mt-3 min-h-20 space-y-1 text-sm text-slate-500">
-                        {product.description.map(
-                          (
-                            item,
-                            index,
-                          ) => (
-                            <li
-                              key={`${product.id}-${index}`}
-                            >
-                              • {item}
-                            </li>
-                          ),
-                        )}
-                      </ul>
-
-                      <div className="mt-4 text-sm text-slate-400">
-                        庫存：
-                        {
-                          product.stock
-                        }
-                      </div>
-
-                      <div className="mt-2 text-2xl font-black text-red-600">
-                        NT$
-                        {formatPrice(
-                          product.price,
-                        )}
-                      </div>
-
-                      <a
-                        href="#contact"
-                        className="mt-4 block w-full rounded-xl bg-slate-950 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-600"
-                      >
-                        詢問商品
-                      </a>
-                    </div>
-                  </article>
-                ),
-              )}
+              <p className="mt-2 text-sm text-slate-400">
+                正在連線至商品資料庫
+              </p>
             </div>
           )}
+
+          {!productsLoading &&
+            productsError && (
+              <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+                <div className="font-bold text-red-700">
+                  商品資料暫時無法讀取
+                </div>
+
+                <p className="mt-2 text-sm text-red-500">
+                  {productsError}
+                </p>
+              </div>
+            )}
+
+          {!productsLoading &&
+            !productsError &&
+            products.length ===
+              0 && (
+              <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+                目前尚無上架商品
+              </div>
+            )}
+
+          {!productsLoading &&
+            !productsError &&
+            products.length >
+              0 && (
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {products.map(
+                  (product) => (
+                    <article
+                      key={
+                        product.id
+                      }
+                      className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                    >
+                      <div className="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 to-slate-700">
+                        {product.imageUrl ? (
+                          <img
+                            src={
+                              product.imageUrl
+                            }
+                            alt={
+                              product.name
+                            }
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Cpu className="h-20 w-20 text-blue-300" />
+                        )}
+                      </div>
+
+                      <div className="p-5">
+                        <div className="mb-2 text-xs font-bold text-blue-600">
+                          {
+                            product.category
+                          }
+                        </div>
+
+                        <h3 className="min-h-14 text-lg font-black">
+                          {
+                            product.name
+                          }
+                        </h3>
+
+                        <ul className="mt-3 min-h-20 space-y-1 text-sm text-slate-500">
+                          {product.description.map(
+                            (
+                              item,
+                              index,
+                            ) => (
+                              <li
+                                key={`${product.id}-${index}`}
+                              >
+                                • {item}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+
+                        <div className="mt-4 text-sm text-slate-400">
+                          庫存：
+                          {
+                            product.stock
+                          }
+                        </div>
+
+                        <div className="mt-2 text-2xl font-black text-red-600">
+                          NT$
+                          {formatPrice(
+                            product.price,
+                          )}
+                        </div>
+
+                        <a
+                          href="#contact"
+                          className="mt-4 block w-full rounded-xl bg-slate-950 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-600"
+                        >
+                          詢問商品
+                        </a>
+                      </div>
+                    </article>
+                  ),
+                )}
+              </div>
+            )}
         </div>
       </section>
 
@@ -498,11 +547,7 @@ export default function HomePage() {
                 LINE 官方帳號
               </h3>
 
-              <p className="mt-2 break-all text-slate-400">
-                tetchy50709froze
-              </p>
-
-              <div className="mx-auto mt-5 max-w-[210px] overflow-hidden rounded-2xl bg-white p-3">
+              <div className="mx-auto mt-5 max-w-[220px] overflow-hidden rounded-2xl bg-white p-3">
                 <img
                   src="https://qr-official.line.me/gs/M_068wtdkw_GW.png?oat_content=qr"
                   alt="鈦鼎資訊 LINE 官方帳號 QR Code"
@@ -510,9 +555,8 @@ export default function HomePage() {
                 />
               </div>
 
-              <p className="mt-3 text-xs text-slate-500">
-                使用 LINE 掃描 QR Code
-                加入官方帳號
+              <p className="mt-4 text-sm text-slate-400">
+                掃描 QR Code 加入 LINE 官方帳號
               </p>
             </div>
 
